@@ -47,11 +47,13 @@ public class JmxTestPlan {
 
         if (postmanVariables != null && postmanVariables.size() != 0) {
             for(PostmanVariable var : postmanVariables) {
+
+                /* If there's a predefined value, it needs to be added to
+                   the test plan. */
                 if(!var.getValue().isEmpty()) {
                     args.addArgument(var.getKey(), var.getValue());
                 }
             }
-
         }
         return args;
     }

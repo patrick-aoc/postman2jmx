@@ -68,47 +68,13 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
             headerManagers.add(JmxHeaderManager.newInstance(item.getName(), item.getRequest().getHeaders()));
 
             // Retrieve the script element for the corresponding request
-            List<String> script = item.getEvents().get(0).getScript().getExec();
-            String varNames = "";
-            String varValues = "";
-
-            for(String line : script) {
-
-                /* We make a check to see if the script is trying to set
-                   a variable dynamically */
-                boolean hasVarDefn = line.contains(".set");
-
-                if (hasVarDefn) {
-
-                    /* The variable name has quotes around it, so split the
-                       line of code at the quote */
-                    List<String> fragments = new ArrayList<>();
-                    String[] codeLine = line.split("\"");
-
-                    String varName = codeLine[1];
-                    String varValue = "$.";
-
-                    String[] values = codeLine[2].split("\\.");
-
-                    for(int i = 0; i < values.length; i++) {
-                        if (i != 0) {
-                            varValue = varValue + values[i];
-
-                            if (i + 1 < values.length) {
-                                varValue = varValue + ".";
-                            }
-                        }
-                    }
-
-                    varValue = StringUtils.substring(varValue, 0, varValue.length() - 2);
-
-                    varNames = varNames + varName + ",";
-                    varValues = varValues + varValue + ",";
-                }
-            }
+            List<String> postTestScript = scriptParser(item.getEvents().get(0).getScript().getExec());
+            String varNames = postTestScript.get(0);
+            String varValues = postTestScript.get(1);
 
             JSONPostProcessor postProcessor = null;
 
+            // Remove the excess comma at the end of the strings.
             if(!varNames.isEmpty() && !varValues.isEmpty()) {
                 postProcessor = JmxJsonPostProcessor.
                         newInstance(StringUtils.substring(varNames, 0, varNames.length() - 1),
@@ -152,6 +118,8 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
                 httpSamplerHashTree.add(jsonPostProcessors);
             }
 
+            /* We only need a JSON post processor if there are dynamic variables
+               from any of the test scripts. */
             if(jsonPostProcessor != null) {
                 httpSamplerHashTree.add(jsonPostProcessor);
             }
@@ -180,4 +148,52 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
         return jmxFile;
     }
 
+    private List<String> scriptParser(List<String> script) {
+        String varNames = "";
+        String varValues = "";
+
+        List<String> varNV = new ArrayList<>();
+
+        for(String line : script) {
+
+            /* We make a check to see if the script is trying to set
+               a variable dynamically */
+            boolean hasVarDefn = line.contains(".set");
+
+            if (hasVarDefn) {
+
+                /* The variable name has quotes around it, so split the
+                   line of code at the quote */
+                List<String> fragments = new ArrayList<>();
+                String[] codeLine = line.split("\"");
+
+                String varName = codeLine[1];
+                String varValue = "$.";
+
+                String[] values = codeLine[2].split("\\.");
+
+                for(int i = 0; i < values.length; i++) {
+                    if (i != 0) {
+                        varValue = varValue + values[i];
+
+                        if (i + 1 < values.length) {
+                            varValue = varValue + ".";
+                        }
+                    }
+                }
+
+                /* The string will have ");" at the end, so we need to make sure to
+                   rmove it. */
+                varValue = StringUtils.substring(varValue, 0, varValue.length() - 2);
+
+                varNames = varNames + varName + ",";
+                varValues = varValues + varValue + ",";
+            }
+        }
+
+        varNV.add(varNames);
+        varNV.add(varValues);
+
+        return varNV;
+    }
 }
