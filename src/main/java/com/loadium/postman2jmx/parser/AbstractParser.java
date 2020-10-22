@@ -3,6 +3,7 @@ package com.loadium.postman2jmx.parser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loadium.postman2jmx.model.postman.PostmanCollection;
 import com.loadium.postman2jmx.model.postman.PostmanItem;
+import com.loadium.postman2jmx.model.postman.PostmanVariable;
 import com.loadium.postman2jmx.utils.PostmanCollectionUtils;
 
 import java.io.IOException;
@@ -28,12 +29,14 @@ public abstract class AbstractParser implements IParser {
         byte[] jsonData = Files.readAllBytes(Paths.get(fileName));
         PostmanCollection postmanCollection = getMapper().readValue(jsonData, PostmanCollection.class);
         getItems(postmanCollection);
+        getVars(postmanCollection);
         return postmanCollection;
     }
 
     protected  PostmanCollection readValue(InputStream is) throws IOException {
         PostmanCollection postmanCollection = getMapper().readValue(is, PostmanCollection.class);
         getItems(postmanCollection);
+        getVars(postmanCollection);
         return postmanCollection;
     }
 
@@ -41,5 +44,11 @@ public abstract class AbstractParser implements IParser {
         List<PostmanItem> items = PostmanCollectionUtils.getItems(postmanCollection);
         //Collections.sort(items);
         postmanCollection.setItems(items);
+    }
+
+    protected void getVars(PostmanCollection postmanCollection) {
+        List<PostmanVariable> vars = PostmanCollectionUtils.getVars(postmanCollection);
+        //Collections.sort(items);
+        postmanCollection.setVars(vars);
     }
 }

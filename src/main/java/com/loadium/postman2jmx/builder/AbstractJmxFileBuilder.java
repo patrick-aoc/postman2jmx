@@ -6,6 +6,7 @@ import com.loadium.postman2jmx.exception.NullPostmanCollectionException;
 import com.loadium.postman2jmx.model.jmx.*;
 import com.loadium.postman2jmx.model.postman.PostmanCollection;
 import com.loadium.postman2jmx.model.postman.PostmanItem;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.jmeter.config.Argument;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.control.LoopController;
@@ -41,7 +42,8 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
         config.setJMeterHome();
 
         // TestPlan
-        TestPlan testPlan = JmxTestPlan.newInstance(postmanCollection.getInfo() != null ? postmanCollection.getInfo().getName() : "");
+        // TestPlan testPlan = JmxTestPlan.newInstance(postmanCollection.getInfo() != null ? postmanCollection.getInfo().getName() : "");
+        TestPlan testPlan = JmxTestPlan.newInstance(postmanCollection.getInfo() != null ? postmanCollection.getInfo().getName() : "", postmanCollection.getVars());
 
         // ThreadGroup controller
         LoopController loopController = JmxLoopController.newInstance();
@@ -52,6 +54,7 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
         // HTTPSamplerProxy
         List<HTTPSamplerProxy> httpSamplerProxies = new ArrayList<>();
         List<HeaderManager> headerManagers = new ArrayList<>();
+        List<JSONPostProcessor> jsonExtractors = new ArrayList<>();
 
         for (PostmanItem item : postmanCollection.getItems()) {
           /*  if (!item.getEvent().isEmpty()) {
@@ -63,6 +66,56 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
             httpSamplerProxies.add(httpSamplerProxy);
 
             headerManagers.add(JmxHeaderManager.newInstance(item.getName(), item.getRequest().getHeaders()));
+
+            // Retrieve the script element for the corresponding request
+            List<String> script = item.getEvents().get(0).getScript().getExec();
+            String varNames = "";
+            String varValues = "";
+
+            for(String line : script) {
+
+                /* We make a check to see if the script is trying to set
+                   a variable dynamically */
+                boolean hasVarDefn = line.contains(".set");
+
+                if (hasVarDefn) {
+
+                    /* The variable name has quotes around it, so split the
+                       line of code at the quote */
+                    List<String> fragments = new ArrayList<>();
+                    String[] codeLine = line.split("\"");
+
+                    String varName = codeLine[1];
+                    String varValue = "$.";
+
+                    String[] values = codeLine[2].split("\\.");
+
+                    for(int i = 0; i < values.length; i++) {
+                        if (i != 0) {
+                            varValue = varValue + values[i];
+
+                            if (i + 1 < values.length) {
+                                varValue = varValue + ".";
+                            }
+                        }
+                    }
+
+                    varValue = StringUtils.substring(varValue, 0, varValue.length() - 2);
+
+                    varNames = varNames + varName + ",";
+                    varValues = varValues + varValue + ",";
+                }
+            }
+
+            JSONPostProcessor postProcessor = null;
+
+            if(!varNames.isEmpty() && !varValues.isEmpty()) {
+                postProcessor = JmxJsonPostProcessor.
+                        newInstance(StringUtils.substring(varNames, 0, varNames.length() - 1),
+                                    StringUtils.substring(varValues, 0, varValues.length() - 1));
+            }
+
+            jsonExtractors.add(postProcessor);
         }
 
         // Create TestPlan hash tree
@@ -86,6 +139,7 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
         for (int i = 0; i < httpSamplerProxies.size(); i++) {
             HTTPSamplerProxy httpSamplerProxy = httpSamplerProxies.get(i);
             HeaderManager headerManager = headerManagers.get(i);
+            JSONPostProcessor jsonPostProcessor = jsonExtractors.get(i);
 
             httpSamplerHashTree = threadGroupHashTree.add(httpSamplerProxy);
 
@@ -96,6 +150,10 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
             if (!postmanItem.getEvents().isEmpty()) {
                 List<JSONPostProcessor> jsonPostProcessors = JmxJsonPostProcessor.getJsonPostProcessors(postmanItem);
                 httpSamplerHashTree.add(jsonPostProcessors);
+            }
+
+            if(jsonPostProcessor != null) {
+                httpSamplerHashTree.add(jsonPostProcessor);
             }
         }
 
