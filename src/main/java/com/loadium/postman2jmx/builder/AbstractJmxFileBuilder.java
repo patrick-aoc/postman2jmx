@@ -77,7 +77,8 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
             // Remove the excess comma at the end of the strings.
             if(!varNames.isEmpty() && !varValues.isEmpty()) {
                 postProcessor = JmxJsonPostProcessor.
-                        newInstance(StringUtils.substring(varNames, 0, varNames.length() - 1),
+                        newInstance(item.getName(),
+                                    StringUtils.substring(varNames, 0, varNames.length() - 1),
                                     StringUtils.substring(varValues, 0, varValues.length() - 1));
             }
 

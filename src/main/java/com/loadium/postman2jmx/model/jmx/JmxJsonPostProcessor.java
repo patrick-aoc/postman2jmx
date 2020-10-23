@@ -32,6 +32,19 @@ public class JmxJsonPostProcessor {
         return jsonPostProcessor;
     }
 
+    public static JSONPostProcessor newInstance(String testName, String name, String jsonPathExpression) {
+        JSONPostProcessor jsonPostProcessor = new JSONPostProcessor();
+        jsonPostProcessor.setProperty(TestElement.GUI_CLASS, JSONPostProcessorGui.class.getName());
+        jsonPostProcessor.setProperty(TestElement.TEST_CLASS, JSONPostProcessor.class.getName());
+        jsonPostProcessor.setEnabled(true);
+        jsonPostProcessor.setName(testName);
+        jsonPostProcessor.setMatchNumbers("0");
+        jsonPostProcessor.setRefNames(name);
+        jsonPostProcessor.setJsonPathExpressions(jsonPathExpression);
+
+        return jsonPostProcessor;
+    }
+
     private static List<JSONPostProcessor> getInstances(List<String> variables, List<String> varValues) {
         List<JSONPostProcessor> jsonPostProcessors = new ArrayList<>();
         if (variables.size()!=varValues.size()) {

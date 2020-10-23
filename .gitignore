@@ -25,3 +25,4 @@ hs_err_pid*
 .idea
 postman2jmx.iml
 target
+.DS_Store
