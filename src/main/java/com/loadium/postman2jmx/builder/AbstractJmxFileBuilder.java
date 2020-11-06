@@ -159,14 +159,14 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
 
             /* We make a check to see if the script is trying to set
                a variable dynamically */
-            boolean hasVarDefn = line.contains(".set");
+            boolean hasVarDefn = line.contains(".set(");
 
             if (hasVarDefn) {
 
                 /* The variable name has quotes around it, so split the
                    line of code at the quote */
                 List<String> fragments = new ArrayList<>();
-                String[] codeLine = line.split("\"");
+                String[] codeLine = line.split("\"|'");
 
                 String varName = codeLine[1];
                 String varValue = "$.";
@@ -183,9 +183,14 @@ public abstract class AbstractJmxFileBuilder implements IJmxFileBuilder {
                     }
                 }
 
-                /* The string will have ");" at the end, so we need to make sure to
-                   rmove it. */
-                varValue = StringUtils.substring(varValue, 0, varValue.length() - 2);
+                /* The string will have ");" or ")" at the end, so we need to make sure to
+                   remove it. */
+                if (varValue.substring(varValue.length() - 1).equalsIgnoreCase(";")) {
+                    varValue = StringUtils.substring(varValue, 0, varValue.length() - 2);
+                } else if (varValue.substring(varValue.length() - 1).equalsIgnoreCase(")")) {
+                    varValue = StringUtils.substring(varValue, 0, varValue.length() - 1);
+                }
+
 
                 varNames = varNames + varName + ",";
                 varValues = varValues + varValue + ",";
